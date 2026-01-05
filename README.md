@@ -1,249 +1,86 @@
 # bioRxiv RAG System
 
-A Retrieval-Augmented Generation (RAG) system for processing bioRxiv academic articles in XML format. This system filters articles by scientific categories and chunks them into semantically meaningful sections for use with Large Language Models.
+A complete Retrieval-Augmented Generation (RAG) system for bioRxiv scientific literature with SciBERT embeddings and semantic search.
 
-## Features
+## 🚀 Quick Start
 
-- **Topic Filtering**: Only processes articles in specified scientific categories
-- **Intelligent Chunking**: Breaks articles into semantic sections (abstract, introduction, methods, etc.)
-- **Metadata Extraction**: Preserves article titles, DOIs, authors, and subject categories
-- **Clean Text Processing**: Extracts clean text from XML while preserving structure
-- **Configurable Categories**: Easy-to-modify category filtering via config file
-
-## Project Structure
-
-```
-├── build_rag.py          # Main RAG functionality
-├── config.py             # Configuration (topic categories)
-├── tests/                # Test directory
-│   ├── __init__.py       # Python package marker
-│   ├── run_tests.py      # Test runner script
-│   ├── test_chunking.py  # Chunking functionality tests
-│   └── test_filtering.py # Filtering functionality tests
-├── rag-env/              # Virtual environment
-├── xml/                  # bioRxiv XML files directory
-└── README.md             # This file
-```
-
-## Setup Instructions
-
-### 1. Creating the Environment
-
-The system uses `uv` for Python environment management. Follow these steps:
+**One command to build your entire RAG database:**
 
 ```bash
-# Navigate to project directory
-cd /home/ubuntu
+# Activate environment
+cd /home/ubuntu/biorxiv_rag
 
-# Create virtual environment
-uv venv rag-env
+# Build database from XML files
+/home/ubuntu/miniconda3/envs/biorxiv/bin/python build_rag_database.py ./subset_xml
 
-# Activate the environment
-source rag-env/bin/activate
-
-# Install required dependencies
-uv pip install lxml
+# Build with options
+/home/ubuntu/miniconda3/envs/biorxiv/bin/python build_rag_database.py ./subset_xml --max-files 50 --test --interactive
 ```
 
-**Alternative with pip (if uv is not available):**
+## 📁 Structure
+
+```
+biorxiv_rag/
+├── build_rag_database.py    # 🎯 MAIN SCRIPT - Run this!
+├── src/                     # All core modules
+│   ├── build_rag.py         # XML processing & chunking
+│   ├── embeddings.py        # SciBERT embedding generation
+│   ├── vector_database.py   # ChromaDB integration
+│   ├── search_interface.py  # Search functionality
+│   ├── rag_system.py       # Complete RAG pipeline
+│   └── config.py           # Configuration
+├── subset_xml/             # Sample XML files (500)
+├── xml/                    # Full XML collection
+└── USAGE_GUIDE.md         # Detailed documentation
+```
+
+## 🎯 What It Does
+
+1. **Finds XML files** in your directory (recursive search supported)
+2. **Parses bioRxiv articles** and filters by scientific categories
+3. **Generates SciBERT embeddings** for semantic understanding
+4. **Stores in ChromaDB** vector database with rich metadata
+5. **Provides search & Q&A** interfaces for scientific literature
+
+## 📊 Features
+
+- **SciBERT Embeddings**: 768D vectors optimized for scientific text
+- **Semantic Search**: Find relevant content by meaning, not just keywords
+- **Category Filtering**: Focus on specific scientific domains
+- **Interactive Q&A**: Ask questions about the literature
+- **Batch Processing**: Handle large collections efficiently
+- **Persistent Storage**: Database survives restarts
+
+## 🔧 Options
+
 ```bash
-python3 -m venv rag-env
-source rag-env/bin/activate
-pip install lxml
+# See all options
+/home/ubuntu/miniconda3/envs/biorxiv/bin/python build_rag_database.py --help
+
+# Common usage patterns
+python build_rag_database.py ./subset_xml                    # Basic usage
+python build_rag_database.py ./xml --recursive               # Search subdirectories  
+python build_rag_database.py ./subset_xml --max-files 50     # Limit files
+python build_rag_database.py ./subset_xml --test             # Build and test
+python build_rag_database.py ./subset_xml --interactive      # Build and start Q&A
+python build_rag_database.py ./subset_xml --output ./my_db   # Custom output location
 ```
 
-### 2. Running the Test Script
+## 🧪 Example Queries
 
-To verify everything is working correctly, run the test suite:
+After building your database, try asking:
 
-```bash
-# Activate environment (if not already active)
-source rag-env/bin/activate
+- "How does CRISPR work in gene editing?"
+- "What are bacterial resistance mechanisms?"
+- "Applications of hydrogels in bioengineering"
+- "Protein structure prediction methods"
 
-# Run all tests
-python tests/run_tests.py
+## 📚 Documentation
 
-# Or run individual tests
-python tests/test_chunking.py
-python tests/test_filtering.py
-```
+See `USAGE_GUIDE.md` for complete documentation, troubleshooting, and advanced usage.
 
-**Expected output:**
-- ✅ All tests should pass
-- The system should process the sample XML file
-- Filtering should work based on the "Bioinformatics" category
+## 🎉 That's It!
 
-### 3. Running the Actual Script
+Your bioRxiv RAG system is now **incredibly simple**: just point the script at XML files and get a complete semantic search database with Q&A capabilities!
 
-#### Basic Usage
-
-```python
-from lxml import etree
-from build_rag import chunk_article
-
-# Load and parse XML file
-with open('xml/April_2019/0a1e58f5-6c09-1014-838d-8b9451ae9aba.xml', 'r') as f:
-    tree = etree.parse(f)
-    root = tree.getroot()
-
-# Process article with filtering
-result = chunk_article(root, check_categories=True)
-
-if result:
-    print(f"Title: {result['metadata']['title']}")
-    print(f"Chunks: {result['metadata']['total_chunks']}")
-    print(f"Subjects: {result['metadata']['subjects']}")
-else:
-    print("Article filtered out (not in target categories)")
-```
-
-#### Batch Processing Example
-
-```python
-import os
-from lxml import etree
-from build_rag import chunk_article
-
-def process_xml_directory(xml_dir):
-    """Process all XML files in a directory."""
-    all_chunks = []
-    processed_count = 0
-    filtered_count = 0
-    
-    for filename in os.listdir(xml_dir):
-        if filename.endswith('.xml'):
-            filepath = os.path.join(xml_dir, filename)
-            
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    tree = etree.parse(f)
-                    root = tree.getroot()
-                
-                result = chunk_article(root, check_categories=True)
-                
-                if result:
-                    all_chunks.extend(result['chunks'])
-                    processed_count += 1
-                    print(f"✅ Processed: {result['metadata']['title']}")
-                else:
-                    filtered_count += 1
-                    print(f"⏭️  Filtered: {filename}")
-                    
-            except Exception as e:
-                print(f"❌ Error processing {filename}: {e}")
-    
-    print(f"\nSummary:")
-    print(f"Processed: {processed_count} articles")
-    print(f"Filtered: {filtered_count} articles")
-    print(f"Total chunks: {len(all_chunks)}")
-    
-    return all_chunks
-
-# Usage
-chunks = process_xml_directory('xml/April_2019/')
-```
-
-## Configuration
-
-### Modifying Topic Categories
-
-Edit `config.py` to change which scientific categories to include:
-
-```python
-KEEP_CATEGORIES = {
-    "Biochemistry",
-    "Bioengineering", 
-    "Bioinformatics",
-    "Biophysics",
-    "Ecology",
-    "Evolutionary biology",
-    "Genetics",
-    "Genomics",
-    "Microbiology",
-    "Molecular biology",
-    "Plant biology",
-    "Synthetic biology"
-}
-```
-
-### Function Parameters
-
-- `chunk_article(article, check_categories=True)`:
-  - `article`: lxml element representing the parsed XML
-  - `check_categories`: If `True`, filters articles by categories; if `False`, processes all articles
-
-## Output Format
-
-Each processed article returns a dictionary with:
-
-```python
-{
-    "chunks": [
-        {
-            "content": "Article title\n\nAbstract text...",
-            "type": "abstract",
-            "metadata": {
-                "title": "Article Title",
-                "doi": "10.1101/123456",
-                "subjects": ["Bioinformatics", "Genomics"]
-            }
-        },
-        {
-            "content": "Section title\n\nSection content...",
-            "type": "section",
-            "section_id": "s1",
-            "metadata": {
-                "title": "Article Title",
-                "doi": "10.1101/123456",
-                "subjects": ["Bioinformatics", "Genomics"],
-                "section_title": "Introduction"
-            }
-        }
-    ],
-    "metadata": {
-        "title": "Article Title",
-        "doi": "10.1101/123456",
-        "subjects": ["Bioinformatics", "Genomics"],
-        "total_chunks": 25
-    }
-}
-```
-
-## Dependencies
-
-- **lxml**: XML parsing and processing
-- **Python 3.7+**: Core language support
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Import Error**: Make sure the virtual environment is activated
-   ```bash
-   source rag-env/bin/activate
-   ```
-
-2. **XML Parsing Error**: Ensure XML files are valid JATS format
-   
-3. **No Articles Processed**: Check if article subjects match categories in `config.py`
-
-4. **Path Issues**: Run scripts from the project root directory
-
-### Getting Help
-
-If you encounter issues:
-1. Check that all dependencies are installed: `uv pip list`
-2. Verify XML file format matches expected JATS structure
-3. Run tests to ensure basic functionality: `python tests/run_tests.py`
-
-## Next Steps
-
-This RAG system provides the foundation for:
-- Vector embedding generation
-- Integration with vector databases (Chroma, Pinecone, etc.)
-- Query interfaces for retrieval
-- Integration with LLMs for question answering
-
-## License
-
-This project is designed for academic and research purposes.
+**Happy researching! 🧬🤖**
