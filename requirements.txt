@@ -1,0 +1,13 @@
+# Core dependencies (already installed)
+lxml>=4.6.0
+
+# New dependencies for embeddings
+torch>=1.9.0
+transformers>=4.20.0
+sentence-transformers>=2.2.0
+numpy>=1.21.0
+
+# Optional: for better performance
+scikit-learn>=1.0.0
+
+
